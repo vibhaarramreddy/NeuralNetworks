@@ -1,0 +1,210 @@
+/**
+ * @author Vibha Arramreddy
+ * September 4th 2019
+ * Building a simple, generic multilayer perceptron
+ */
+
+public class MultilayerPerceptron {
+
+   private double[][] activations;   
+   private double[][][] weights;
+   private int numLayers;
+   private int numRows;
+	
+
+   /**
+    * Constructs a multilevel perception with configurable number of layers and inputs.
+    * 
+    * @param layers       total number of layers in the perceptron
+    * @param rows  		  max number of layers in the perceptron
+    * @param numInputs    number of nodes in the activation layer
+    * @param numOutputs   number of nodes in the output layer
+    * @param numHidden    array whose length represents the number of hidden layers and value(s) represents the number of nodes in the layer(s)
+    */
+   public MultilayerPerceptron(int layers, int rows, int numInputs, int numOutputs, int[] numHidden)
+   {
+      activations = new double[layers][];                          //The array containing all the node values
+      weights = new double[(layers-1)][rows][rows];                //The array containing all the weight values
+		
+      activations[0] = new double[numInputs];                      //Defines the number or nodes/rows in the activation layer
+      activations[layers-1] = new double[numOutputs];              //Defines the number of nodes/rows in the output layer
+      for(int i = 0; i < numHidden.length; i++)                    //Loop that defines all of the hidden layers
+      {
+         activations[i+1] = new double[numHidden[i]];
+      }
+		
+      numLayers = layers;
+      numRows = rows;
+   }
+
+
+   /**
+    * Sets the input values for the network.
+    * 
+    * @param inputValues the values for the input nodes in order
+    */
+   public void setInputValues(double[] inputValues)
+   {
+      for(int i = 0; i < inputValues.length; i++)             //Iterates over the nodes in the activation layer
+      {
+         activations[0][i] = inputValues[i];
+      }  
+   }
+	
+   
+   /**
+    * Hard codes the value of the weights in order to test the neural network. 
+    * For this case, the weights correspond to the weights for OR in the spreadsheet. 
+    */
+   public void setWeights()
+   {
+      weights[0][0][0] = 0.49;
+      weights[0][0][1] = 0.49;
+      weights[0][1][0] = 0.49;
+      weights[0][1][1] = 0.49;
+      weights[1][0][0] = 0.68;
+      weights[1][1][0] = 0.68;
+   }
+	
+   
+   /**
+    * The propagation function inputs the output vector into the connectivity matrix to determine a net input for each unit. 
+    * For this model, the function calculates the net input of the specified node by taking the dot product of all nodes in the previous layer. 
+    * 
+    * @precondition only calculates values for nodes in the hidden and output layers, not the activation layer. 
+    * 
+    * @param actRow    the row of the activation node
+    * @param actLayer  the layer of the activation node
+    * @return the net input for the specified node
+    */
+   public double propagationFunction(int actLayer, int actRow)
+   {
+      activations[actLayer][actRow] = 0.0;                            //Initializes the node value to zero
+	   
+      for(int i = 0; i < activations[actLayer-1].length; i++)         //Iterates over the nodes in the previous layer
+      {
+         activations[actLayer][actRow] += (activations[actLayer-1][i] * weights[actLayer-1][i][actRow]);
+      }
+		
+      return activations[actLayer][actRow];
+   }
+	
+   
+   /**
+    * The activation function combines the inputs into the unit and 
+    * the current activation state of the unit to produce a new activation level for the the unit. 
+    * Since, for this model, there is no activation function, the net input is just returned.
+    * 
+    * @param netInput the net input into the node
+    * @return the new value for the unit
+    */
+   public double activationFunction(double netInput)
+   {
+      return netInput;
+   }
+	
+   
+   /**
+    * Calculates the final value of the node using the both propagation and activation function.
+    * 
+    * @param actRow    the row of the activation node
+    * @param actLayer  the layer of the activation node
+    * @return the final value of the node
+    */
+   public double calculateActivationValue(int actRow, int actLayer)
+   {
+      double netInput = propagationFunction(actRow, actLayer);
+      return activationFunction(netInput);
+   }
+	
+   
+   /**
+    * Calculates the values of the output nodes. 
+    * First, uses the propagation function to determine the value of the hidden nodes. 
+    * Then, uses the propagation function and hidden nodes' values to determine the value for the output nodes. 
+    * 
+    * @return an array containing all the output values
+    */
+   public double[] calculateOutputs() 
+   {
+      //Iterates over the nodes in the hidden and output layers
+      for(int i = 1; i < numLayers; i++)                  
+      {
+         for(int j = 0; j < activations[i].length; j++)   
+         {
+            calculateActivationValue(i,j);                     //Uses the propagation function to define values for all non-input nodes
+         }
+      }
+		
+      return activations[numLayers-1];                    //Returns all output values 
+   }
+	
+   
+   /**
+    * Uses the error function to calculate the error of the specific case.
+    * E = (1/2)(T - F)^2
+    * where T is the exact/training value and F is the calculated value.
+    * 
+    * @param calculatedAns   the answer calculated using the neural network
+    * @param trainingVal     the exact answer 
+    * @return the error value for the specific case (inputs)
+    */
+   public double calculateIndividualError(double calculatedAns, double trainingVal)
+   {
+      return ((0.5) * Math.pow((trainingVal - calculatedAns), 2));
+   }
+	
+   
+   /**
+    * Calculates the total error of the network by combining all the individual errors.
+    * Total Error = sqrt(E1^2 + E2^2 + ... + EN^2)
+    * where N is the total number of individual errors.
+    * 
+    * @param calculatedErrors   an array containing all the individual errors
+    * @return the total error for the neural network
+    */
+   public double calculateTotalError(double[] calculatedErrors)
+   {
+      double totalError = 0.0;
+		
+      for(int i = 0; i < calculatedErrors.length; i++)       //Iterates over the individual errors
+      {
+         totalError += Math.pow(calculatedErrors[i], 2);
+      }
+		
+      return Math.sqrt(totalError);
+   }
+	
+   
+   /**
+    * Runs the the entire perceptron. 
+    * In this case, it creates a perceptron for the OR function (from the spreadsheet).
+    * 
+    * @param args the arguments passed through the main method
+    */
+   public static void main(String[] args) 
+   {
+      int[] hiddenLayers = {2};                                                 //Specifies that the network has one hidden layer with 2 nodes
+      double[][] inputValues = {{0.0,0.0}, {0.0,1.0}, {1.0,0.0}, {1.0,1.0}};    //The input values for the OR function
+      double[] trainingValues = {0.0, 1.0, 1.0, 1.0};                           //The training data or expected results for the OR function
+		
+      MultilayerPerceptron orPerceptron = new MultilayerPerceptron(3, 2, 2, 1, hiddenLayers);
+		
+      orPerceptron.setWeights();                                      //Sets the predetermined weights
+		                                       
+		
+      double[] errors = new double[trainingValues.length];            //Creates an array to hold the errors for each case
+      double[][] ans = new double[trainingValues.length][];           //Creates a 2D array to hold the outputs for each case
+		
+      for(int i = 0; i < inputValues.length; i++)
+      {
+         orPerceptron.setInputValues(inputValues[i]);                                      //Sets the input nodes' values for the specified case
+         ans[i] = orPerceptron.calculateOutputs();                                         //Stores the output values for the specified case
+         errors[i] = orPerceptron.calculateIndividualError(ans[i][0], trainingValues[i]);  
+         System.out.println("Case " + i + ": " + errors[i]);                               //Prints the error value
+      }
+
+      System.out.println("Total Error: " + orPerceptron.calculateTotalError(errors));      //Prints the total error of the network
+   }
+	
+}
